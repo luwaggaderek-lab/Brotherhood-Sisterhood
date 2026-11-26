@@ -1,0 +1,2232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brotherhood & Sisterhood — Live Cloud Membership Portal & A4 PDF Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Supabase JS Client v2 for Live Multi-Device Sync -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Client-side ISO A4 PDF Generator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #0B2545;
+      --gold: #D4AF37;
+      --gold-dark: #9A6F08;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    /* Cursive script rendering for executive digital signatures */
+    .sig-script {
+      font-family: 'Great Vibes', 'Brush Script MT', cursive;
+      font-size: 15.5pt;
+      color: #0B2545;
+      line-height: 1.05;
+    }
+
+    /* Exact ISO A4 Portrait Geometry (210mm x 297mm) calibrated against overflow/blank 2nd page */
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+
+    .a4-sheet {
+      width: 210mm;
+      height: 296mm;
+      max-height: 296mm;
+      padding: 10mm 13mm 9mm 13mm;
+      background: #ffffff;
+      color: #1e293b;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      box-shadow: 0 20px 45px -15px rgba(11, 37, 69, 0.25);
+      border: 1px solid #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      margin: 0 auto;
+      position: relative;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+
+    .a4-masthead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding-bottom: 7px;
+      border-bottom: 3px double #0B2545;
+    }
+
+    .a4-h2 {
+      font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+      font-size: 9pt;
+      font-weight: 800;
+      color: #0B2545;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding-bottom: 2px;
+      border-bottom: 1.5px solid #D4AF37;
+      margin: 7px 0 4px 0;
+    }
+
+    .a4-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8.6pt;
+    }
+
+    .a4-table th {
+      text-align: left;
+      font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+      font-size: 7.7pt;
+      font-weight: 700;
+      color: #0B2545;
+      background-color: #f1f5f9;
+      padding: 3.5px 6px;
+      border: 1px solid #cbd5e1;
+    }
+
+    .a4-table td {
+      padding: 4px 6px;
+      border: 1px solid #cbd5e1;
+      color: #0f172a;
+      vertical-align: middle;
+    }
+
+    .a4-passport-frame {
+      width: 31mm;
+      height: 40mm;
+      border: 1.5px solid #0B2545;
+      background: #f8fafc;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .a4-passport-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Official Circular Gold & Navy Approved Stamp */
+    .official-seal-stamp {
+      width: 24mm;
+      height: 24mm;
+      border: 2px double #0B2545;
+      border-radius: 9999px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #0B2545;
+      background: radial-gradient(circle, rgba(254, 249, 195, 0.45) 0%, rgba(255, 255, 255, 0.95) 100%);
+      box-shadow: inset 0 0 0 1.5px #D4AF37;
+      transform: rotate(-8deg);
+      font-family: 'Inter', sans-serif;
+      padding: 2px;
+    }
+
+    @media print {
+      html, body {
+        background: #ffffff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      #print-area-wrapper {
+        padding: 0 !important;
+        margin: 0 !important;
+        background: #ffffff !important;
+        display: block !important;
+        overflow: visible !important;
+      }
+      .a4-sheet {
+        width: 210mm !important;
+        height: 296mm !important;
+        max-height: 296mm !important;
+        margin: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        page-break-after: avoid;
+        break-after: avoid;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Toast Notification Container (No alert() or confirm() used) -->
+  <div id="toast-container" class="no-print fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm"></div>
+
+  <!-- Top Navigation Header -->
+  <header class="no-print bg-[#0B2545] text-white shadow-lg sticky top-0 z-40 border-b-4 border-[#D4AF37]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <!-- Custom Brotherhood & Sisterhood Circular Emblem SVG -->
+        <div class="w-12 h-12 rounded-full bg-white p-0.5 border-2 border-[#D4AF37] flex items-center justify-center overflow-hidden flex-shrink-0 shadow">
+          <svg class="w-full h-full" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <path id="navTopArc" d="M 28,110 A 82,82 0 1,1 192,110" />
+              <path id="navBottomArc" d="M 24,114 A 86,86 0 0,0 196,114" />
+            </defs>
+            <circle cx="110" cy="110" r="106" fill="#ffffff" stroke="#0B2545" stroke-width="6"/>
+            <circle cx="110" cy="110" r="98" fill="none" stroke="#D4AF37" stroke-width="3.5"/>
+            <!-- Top Curved Title -->
+            <text font-family="Inter, Arial, sans-serif" font-size="11.5" font-weight="800" fill="#0B2545" letter-spacing="1.1">
+              <textPath href="#navTopArc" startOffset="50%" text-anchor="middle">BROTHERHOOD AND SISTERHOOD</textPath>
+            </text>
+            <!-- Radiating Light Rays -->
+            <g stroke="#D4AF37" stroke-width="2.2" opacity="0.9">
+              <line x1="110" y1="36" x2="110" y2="92"/>
+              <line x1="82" y1="45" x2="104" y2="92"/>
+              <line x1="138" y1="45" x2="116" y2="92"/>
+              <line x1="62" y1="64" x2="98" y2="95"/>
+              <line x1="158" y1="64" x2="122" y2="95"/>
+              <line x1="52" y1="86" x2="95" y2="98"/>
+              <line x1="168" y1="86" x2="125" y2="98"/>
+            </g>
+            <!-- Golden-Trimmed Navy Cross -->
+            <rect x="103" y="42" width="14" height="62" rx="1.5" fill="#0B2545" stroke="#D4AF37" stroke-width="2"/>
+            <rect x="83" y="60" width="54" height="12" rx="1.5" fill="#0B2545" stroke="#D4AF37" stroke-width="2"/>
+            <!-- 4 Silhouetted Brothers & Sisters Embracing -->
+            <circle cx="68" cy="103" r="8.5" fill="#0B2545"/>
+            <circle cx="95" cy="107" r="8" fill="#1e3a8a"/>
+            <circle cx="125" cy="104" r="8.5" fill="#0B2545"/>
+            <circle cx="152" cy="107" r="8" fill="#1e3a8a"/>
+            <path d="M52 146 C52 120, 84 120, 84 146 Z" fill="#0B2545"/>
+            <path d="M80 146 C80 123, 110 123, 110 146 Z" fill="#1d4ed8"/>
+            <path d="M110 146 C110 120, 140 120, 140 146 Z" fill="#0B2545"/>
+            <path d="M136 146 C136 123, 168 123, 168 146 Z" fill="#1d4ed8"/>
+            <!-- Embracing Arms -->
+            <path d="M62 128 Q95 135 128 128" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M92 130 Q125 136 156 129" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+            <!-- Open Book "Stronger Together" -->
+            <path d="M60 142 Q110 150 110 166 Q110 150 160 142 L164 164 Q110 174 110 180 Q110 174 56 164 Z" fill="#ffffff" stroke="#0B2545" stroke-width="2.5"/>
+            <path d="M58 161 Q110 171 110 177 Q110 171 162 161" fill="none" stroke="#D4AF37" stroke-width="2.5"/>
+            <text x="86" y="156" text-anchor="middle" font-size="6.5" font-weight="bold" fill="#0B2545" font-family="Georgia">Stronger</text>
+            <text x="134" y="156" text-anchor="middle" font-size="6.5" font-weight="bold" fill="#0B2545" font-family="Georgia">Together</text>
+            <!-- Bottom Curved Motto -->
+            <text font-family="Inter, Arial, sans-serif" font-size="9.5" font-weight="800" fill="#0B2545" letter-spacing="0.8">
+              <textPath href="#navBottomArc" startOffset="50%" text-anchor="middle">ONE FAMILY • SUPPORT • GROW • SERVE</textPath>
+            </text>
+          </svg>
+        </div>
+
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-[11px] uppercase tracking-widest text-amber-300 font-semibold">One Family • Support • Grow • Serve</span>
+            <button onclick="openCloudSetupModal()" id="sync-status-btn" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-200 border border-amber-400/40 hover:bg-amber-500/30 transition cursor-pointer" title="Click to configure Supabase Live Cloud">
+              <span id="sync-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+              <span id="sync-status-text">Local Offline Demo Mode</span>
+            </button>
+          </div>
+          <h1 class="text-base sm:text-xl font-bold tracking-tight">Brotherhood &amp; Sisterhood Registry Portal</h1>
+        </div>
+      </div>
+
+      <!-- Navigation Controls -->
+      <nav class="flex flex-wrap items-center gap-2">
+        <button onclick="switchTab('register')" id="tab-btn-register" class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-[#D4AF37] text-[#0B2545] shadow transition flex items-center gap-1.5">
+          <i data-lucide="user-plus" class="w-4 h-4"></i>
+          <span>Register</span>
+        </button>
+        <button onclick="switchTab('directory')" id="tab-btn-directory" class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-white/10 hover:bg-white/20 text-white transition flex items-center gap-1.5">
+          <i data-lucide="users" class="w-4 h-4"></i>
+          <span>Directory (<span id="member-count">0</span>)</span>
+        </button>
+        <button onclick="switchTab('preview')" id="tab-btn-preview" class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-white/10 hover:bg-white/20 text-white transition flex items-center gap-1.5">
+          <i data-lucide="file-text" class="w-4 h-4"></i>
+          <span>A4 Dossier</span>
+        </button>
+        <button onclick="switchTab('constitution')" id="tab-btn-constitution" class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-white/10 hover:bg-white/20 text-white transition flex items-center gap-1.5">
+          <i data-lucide="book-open" class="w-4 h-4"></i>
+          <span>Constitution</span>
+        </button>
+        <button onclick="openCloudSetupModal()" class="px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-white/10 hover:bg-white/20 text-sky-200 border border-sky-400/30 transition flex items-center gap-1.5" title="Configure Supabase URL & Key">
+          <i data-lucide="cloud" class="w-4 h-4"></i>
+          <span class="hidden md:inline">Cloud Setup</span>
+        </button>
+        <button onclick="toggleAdminAuth()" id="admin-toggle-btn" class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-400/40 transition flex items-center gap-1.5">
+          <i data-lucide="lock" class="w-4 h-4"></i>
+          <span id="admin-toggle-label">Admin Login</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Admin Mode Active Banner -->
+  <div id="admin-banner" class="no-print hidden bg-amber-50 border-b border-amber-300 text-[#0B2545]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2 text-xs sm:text-sm font-semibold">
+        <i data-lucide="shield-check" class="w-5 h-5 text-emerald-700"></i>
+        <span><strong>Admin Mode Unlocked:</strong> Edit/delete member records, manage Article 6 Signatories, and issue verified A4 PDF dossiers.</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="openLeadershipDefaultsModal()" class="px-3 py-1.5 bg-[#0B2545] hover:bg-[#081b33] text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5">
+          <i data-lucide="pen-tool" class="w-3.5 h-3.5"></i> Default Executive Names
+        </button>
+        <button onclick="lockAdminMode()" class="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-semibold rounded-lg transition">
+          Lock Admin
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- TAB 1: REGISTRATION FORM & LIVE PASSPORT PHOTO STUDIO -->
+    <section id="view-register" class="no-print space-y-6">
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 sm:p-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 pb-4 mb-6 border-b border-slate-200">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-xl font-bold text-[#0B2545]" id="form-heading">Constitutional Membership Registration</h2>
+              <span id="editing-badge" class="hidden px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">Admin Editing Mode</span>
+            </div>
+            <p class="text-sm text-slate-500">Aligned with the 2026 Constitution of Brotherhood and Sisterhood (Articles 1–11).</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="resetForm()" class="px-3 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition">
+              New / Clear Form
+            </button>
+            <button type="button" onclick="loadBlankA4Form()" class="px-3 py-2 text-sm font-semibold text-[#0B2545] bg-amber-100 hover:bg-amber-200 rounded-lg transition flex items-center gap-1.5">
+              <i data-lucide="file-down" class="w-4 h-4"></i>
+              Blank A4 Form
+            </button>
+          </div>
+        </div>
+
+        <form id="registration-form" onsubmit="handleSaveMember(event)" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <!-- Left Column: Live Webcam & Upload Passport Studio -->
+          <div class="lg:col-span-4 space-y-4">
+            <div class="bg-slate-50 border-2 border-dashed border-[#0B2545]/40 rounded-xl p-4 flex flex-col items-center text-center">
+              <span class="text-xs font-bold uppercase tracking-wider text-[#0B2545] mb-2">Biometric Passport Photo (35×45mm)</span>
+
+              <div class="relative w-44 h-56 bg-slate-900 rounded-lg overflow-hidden border-2 border-[#0B2545] shadow-inner flex items-center justify-center">
+                <video id="camera-stream" autoplay playsinline class="hidden w-full h-full object-cover"></video>
+                <img id="photo-preview" src="" alt="Captured Passport" class="hidden w-full h-full object-cover" />
+                <div id="photo-placeholder" class="text-slate-400 p-4 flex flex-col items-center">
+                  <i data-lucide="camera" class="w-10 h-10 mb-2 text-slate-500"></i>
+                  <span class="text-xs">Start webcam or upload portrait photo</span>
+                </div>
+                <!-- Passport Oval Alignment Guide -->
+                <div id="camera-guide" class="hidden pointer-events-none absolute inset-4 border-2 border-dashed border-amber-400/80 rounded-full"></div>
+              </div>
+              <canvas id="photo-canvas" width="350" height="450" class="hidden"></canvas>
+
+              <div class="mt-4 flex flex-wrap justify-center gap-2 w-full">
+                <button type="button" id="btn-start-cam" onclick="startCamera()" class="flex-1 min-w-[110px] px-3 py-2 bg-[#0B2545] hover:bg-[#081b33] text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition">
+                  <i data-lucide="video" class="w-4 h-4"></i> Start Camera
+                </button>
+                <button type="button" id="btn-switch-cam" onclick="switchCameraFacing()" class="hidden px-2.5 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1 transition" title="Switch Front/Rear Camera">
+                  <i data-lucide="refresh-cw" class="w-4 h-4"></i> Flip
+                </button>
+                <button type="button" id="btn-capture-cam" onclick="capturePhoto()" class="hidden flex-1 min-w-[110px] px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition">
+                  <i data-lucide="aperture" class="w-4 h-4"></i> Capture Snap
+                </button>
+                <button type="button" id="btn-stop-cam" onclick="stopCamera()" class="hidden px-2.5 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-lg transition">
+                  Stop
+                </button>
+              </div>
+
+              <div class="mt-2 w-full">
+                <label class="cursor-pointer w-full px-3 py-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition">
+                  <i data-lucide="upload" class="w-4 h-4"></i> Upload Photo File
+                  <input type="file" accept="image/*" onchange="handlePhotoUpload(event)" class="hidden" />
+                </label>
+              </div>
+              <p id="camera-error" class="hidden mt-2 text-xs text-rose-600 font-medium"></p>
+            </div>
+
+            <!-- Cloud Connection Card -->
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-600 space-y-1.5">
+              <div class="flex items-center justify-between font-bold text-[#0B2545]">
+                <span>Multi-Location Cloud Sync</span>
+                <button type="button" onclick="openCloudSetupModal()" class="text-[#9A6F08] underline">Configure</button>
+              </div>
+              <p>Photos are automatically compressed to crisp 350×450 JPEG portraits for instant synchronization across all member phones and computers.</p>
+            </div>
+          </div>
+
+          <!-- Right Column: Structured Constitutional Fields -->
+          <div class="lg:col-span-8 space-y-6">
+            <!-- Section A: Personal Particulars (Article 4) -->
+            <div>
+              <h3 class="text-sm font-bold uppercase tracking-wider text-[#0B2545] border-b border-[#D4AF37] pb-1 mb-3">Section A: Personal Particulars &amp; Registry ID (Article 4)</h3>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Membership Number *</label>
+                  <input type="text" id="field-memberNo" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0B2545] outline-none font-mono font-semibold text-[#0B2545]" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Registration Date *</label>
+                  <input type="date" id="field-regDate" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0B2545] outline-none" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Gender *</label>
+                  <select id="field-gender" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0B2545] outline-none bg-white">
+                    <option value="Female">Female (Sisterhood)</option>
+                    <option value="Male">Male (Brotherhood)</option>
+                  </select>
+                </div>
+
+                <div class="sm:col-span-2">
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Full Legal Name *</label>
+                  <input type="text" id="field-fullName" required placeholder="e.g., Joannah Namukasa" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0B2545] outline-none" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Date of Birth *</label>
+                  <input type="date" id="field-dob" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0B2545] outline-none" />
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">National ID / Passport No. *</label>
+                  <input type="text" id="field-nationalId" required placeholder="e.g., CM90012345ABCD" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0B2545] outline-none" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Marital Status</label>
+                  <select id="field-marital" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0B2545] outline-none bg-white">
+                    <option value="Single">Single</option>
+                    <option value="Married">Married</option>
+                    <option value="Widowed">Widowed</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Occupation / Trade</label>
+                  <input type="text" id="field-occupation" placeholder="e.g., Teacher, Entrepreneur" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0B2545] outline-none" />
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Primary Phone Number *</label>
+                  <input type="tel" id="field-phone" required placeholder="+256 7XX XXX XXX" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0B2545] outline-none" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
+                  <input type="email" id="field-email" placeholder="member@example.org" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0B2545] outline-none" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Residence / Address *</label>
+                  <input type="text" id="field-residence" required placeholder="Parish, District, Country" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0B2545] outline-none" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Section B: Next of Kin & Welfare Support (Article 3) -->
+            <div>
+              <h3 class="text-sm font-bold uppercase tracking-wider text-[#0B2545] border-b border-[#D4AF37] pb-1 mb-3">Section B: Next of Kin &amp; Welfare Support (Article 3)</h3>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Next of Kin Full Name *</label>
+                  <input type="text" id="field-emergencyName" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0B2545] outline-none" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Relationship *</label>
+                  <input type="text" id="field-emergencyRel" required placeholder="e.g., Spouse, Parent, Sibling" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0B2545] outline-none" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Next of Kin Phone *</label>
+                  <input type="tel" id="field-emergencyPhone" required placeholder="+256 7XX XXX XXX" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0B2545] outline-none" />
+                </div>
+              </div>
+            </div>
+
+            <!-- ADMIN ONLY: Section D Official Leadership Approval & Signatories (Article 6) -->
+            <div id="admin-signatories-panel" class="hidden bg-amber-50/80 border-2 border-[#D4AF37] rounded-xl p-4 space-y-4">
+              <div class="flex flex-wrap items-center justify-between gap-2 border-b border-amber-300 pb-2">
+                <div>
+                  <h3 class="text-sm font-bold uppercase tracking-wider text-[#0B2545] flex items-center gap-1.5">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-emerald-700"></i>
+                    Admin Section D: Executive Approval &amp; Signatories (Article 6)
+                  </h3>
+                  <p class="text-xs text-slate-600">Complete executive names, signatures, and approval status to generate an officially verified A4 PDF.</p>
+                </div>
+                <button type="button" onclick="applyLeadershipDefaultsToForm()" class="px-3 py-1.5 bg-[#0B2545] hover:bg-[#081b33] text-white text-xs font-semibold rounded-lg transition">
+                  Auto-Fill Default Leaders
+                </button>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-[#0B2545] mb-1">Registry Approval Status</label>
+                  <select id="field-approvalStatus" class="w-full px-3 py-2 text-sm border border-amber-300 rounded-lg bg-white font-bold text-[#0B2545]">
+                    <option value="Pending">Pending Executive Review</option>
+                    <option value="Approved">Approved &amp; Verified Member</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <!-- Chairperson -->
+                <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
+                  <span class="text-xs font-bold text-[#0B2545] uppercase block">1. Chairperson</span>
+                  <input type="text" id="sig-chair-name" placeholder="Chairperson Full Name" class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded" />
+                  <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="sig-chair-sign" placeholder="Signature" class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded italic" />
+                    <input type="date" id="sig-chair-date" class="w-full px-2 py-1.5 text-xs border border-slate-300 rounded" />
+                  </div>
+                </div>
+
+                <!-- General Secretary -->
+                <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
+                  <span class="text-xs font-bold text-[#0B2545] uppercase block">2. General Secretary</span>
+                  <input type="text" id="sig-sec-name" placeholder="General Secretary Full Name" class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded" />
+                  <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="sig-sec-sign" placeholder="Signature" class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded italic" />
+                    <input type="date" id="sig-sec-date" class="w-full px-2 py-1.5 text-xs border border-slate-300 rounded" />
+                  </div>
+                </div>
+
+                <!-- Treasurer -->
+                <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
+                  <span class="text-xs font-bold text-[#0B2545] uppercase block">3. Treasurer</span>
+                  <input type="text" id="sig-treas-name" placeholder="Treasurer Full Name" class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded" />
+                  <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="sig-treas-sign" placeholder="Signature" class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded italic" />
+                    <input type="date" id="sig-treas-date" class="w-full px-2 py-1.5 text-xs border border-slate-300 rounded" />
+                  </div>
+                </div>
+
+                <!-- Welfare Coordinator -->
+                <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
+                  <span class="text-xs font-bold text-[#0B2545] uppercase block">4. Welfare Coordinator</span>
+                  <input type="text" id="sig-welfare-name" placeholder="Welfare Coordinator Full Name" class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded" />
+                  <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="sig-welfare-sign" placeholder="Signature" class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded italic" />
+                    <input type="date" id="sig-welfare-date" class="w-full px-2 py-1.5 text-xs border border-slate-300 rounded" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section C: Constitutional Declaration & Oath -->
+            <div class="bg-slate-50 border-l-4 border-[#0B2545] p-4 rounded-r-lg">
+              <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" id="field-oath" required class="mt-1 w-4 h-4 accent-[#0B2545]" />
+                <span class="text-xs text-slate-700 leading-relaxed">
+                  <strong>Constitutional Declaration &amp; Oath (Articles 4, 5, 8, 9 &amp; 11):</strong> I affirm that I believe in the Vision, Mission, and Motto (<em>“ONE FAMILY, SUPPORT, GROW AND SERVE”</em>) of the Brotherhood and Sisterhood Program. I commit to mutual respect, confidentiality, peaceful conflict resolution, attendance at meetings, and transparent financial participation.
+                </span>
+              </label>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-end gap-3 pt-2">
+              <button type="submit" id="btn-submit-member" class="px-6 py-3 bg-[#0B2545] hover:bg-[#081b33] text-white font-bold text-sm rounded-xl shadow-md transition flex items-center gap-2">
+                <i data-lucide="cloud-upload" class="w-4 h-4 text-[#D4AF37]"></i>
+                <span>Save &amp; Sync Member + Generate A4 PDF</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- TAB 2: LIVE SYNCED MEMBER DIRECTORY -->
+    <section id="view-directory" class="no-print hidden space-y-6">
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 sm:p-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 pb-4 mb-6 border-b border-slate-200">
+          <div>
+            <h2 class="text-xl font-bold text-[#0B2545]">Live Synced Member Directory</h2>
+            <p class="text-sm text-slate-500">Real-time synchronized registry across all devices. Tap any phone button to call directly.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <select id="filter-status" onchange="renderDirectory()" class="px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white outline-none">
+              <option value="ALL">All Statuses</option>
+              <option value="Approved">Approved &amp; Verified</option>
+              <option value="Pending">Pending Approval</option>
+            </select>
+            <input type="text" id="search-members" oninput="renderDirectory()" placeholder="Search name, ID, phone, residence..." class="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0B2545] outline-none" />
+          </div>
+        </div>
+
+        <div id="directory-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: EXACT ISO A4 PDF DOSSIER PREVIEW & GENERATOR -->
+    <section id="view-preview" class="hidden space-y-4">
+      <div class="no-print bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <span class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-[#0B2545] text-[#D4AF37]">
+            <i data-lucide="file-check" class="w-5 h-5"></i>
+          </span>
+          <div>
+            <h2 class="text-base font-bold text-[#0B2545]" id="preview-banner-title">Official A4 Registration Dossier</h2>
+            <p class="text-xs text-slate-500">ISO A4 Standard (210mm × 297mm) • Ready for direct PDF download or printing.</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="preview-admin-edit-btn" onclick="editCurrentPreviewAsAdmin()" class="hidden px-3.5 py-2 text-xs font-bold bg-amber-100 hover:bg-amber-200 text-[#0B2545] border border-amber-300 rounded-lg transition flex items-center gap-1.5">
+            <i data-lucide="pen-tool" class="w-4 h-4"></i>
+            Edit / Sign Off (Admin)
+          </button>
+          <button onclick="downloadDirectA4PDF()" id="btn-download-pdf" class="px-5 py-2.5 text-sm font-bold bg-[#0B2545] hover:bg-[#081b33] text-white rounded-lg shadow transition flex items-center gap-2">
+            <i data-lucide="download" class="w-4 h-4 text-[#D4AF37]"></i>
+            <span>Download A4 PDF</span>
+          </button>
+          <button onclick="window.print()" class="px-3.5 py-2.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition flex items-center gap-1.5" title="Browser Print Dialog">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            <span>Print</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Admin Quick Approve & Sign-Off Bar in Preview -->
+      <div id="preview-quick-sign-bar" class="no-print hidden bg-amber-50 border border-amber-300 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3">
+        <div class="text-xs text-[#0B2545]">
+          <strong>Admin Quick Sign-Off:</strong> Stamp and sign this member's A4 dossier using your saved default leadership names.
+        </div>
+        <button onclick="quickApproveAndSignCurrentMember()" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-1.5">
+          <i data-lucide="check-circle" class="w-4 h-4"></i>
+          Approve &amp; Stamp Executive Signatories
+        </button>
+      </div>
+
+      <!-- Printable / Exportable ISO A4 Sheet -->
+      <div id="print-area-wrapper" class="overflow-x-auto pb-8">
+        <article class="a4-sheet" id="a4-document">
+          <div>
+            <!-- Official Masthead with Inline SVG Seal & 35x45mm Passport Frame -->
+            <header class="a4-masthead">
+              <div class="flex items-center gap-3">
+                <div class="w-[23mm] h-[23mm] flex-shrink-0 flex items-center justify-center">
+                  <svg class="w-full h-full" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <path id="pdfTopArc" d="M 28,110 A 82,82 0 1,1 192,110" />
+                      <path id="pdfBottomArc" d="M 24,114 A 86,86 0 0,0 196,114" />
+                    </defs>
+                    <circle cx="110" cy="110" r="106" fill="#ffffff" stroke="#0B2545" stroke-width="6"/>
+                    <circle cx="110" cy="110" r="98" fill="none" stroke="#D4AF37" stroke-width="3.5"/>
+                    <text font-family="Inter, Arial, sans-serif" font-size="11.5" font-weight="800" fill="#0B2545" letter-spacing="1.1">
+                      <textPath href="#pdfTopArc" startOffset="50%" text-anchor="middle">BROTHERHOOD AND SISTERHOOD</textPath>
+                    </text>
+                    <g stroke="#D4AF37" stroke-width="2.2" opacity="0.9">
+                      <line x1="110" y1="36" x2="110" y2="92"/>
+                      <line x1="82" y1="45" x2="104" y2="92"/>
+                      <line x1="138" y1="45" x2="116" y2="92"/>
+                      <line x1="62" y1="64" x2="98" y2="95"/>
+                      <line x1="158" y1="64" x2="122" y2="95"/>
+                    </g>
+                    <rect x="103" y="42" width="14" height="62" rx="1.5" fill="#0B2545" stroke="#D4AF37" stroke-width="2"/>
+                    <rect x="83" y="60" width="54" height="12" rx="1.5" fill="#0B2545" stroke="#D4AF37" stroke-width="2"/>
+                    <circle cx="68" cy="103" r="8.5" fill="#0B2545"/>
+                    <circle cx="95" cy="107" r="8" fill="#1e3a8a"/>
+                    <circle cx="125" cy="104" r="8.5" fill="#0B2545"/>
+                    <circle cx="152" cy="107" r="8" fill="#1e3a8a"/>
+                    <path d="M52 146 C52 120, 84 120, 84 146 Z" fill="#0B2545"/>
+                    <path d="M80 146 C80 123, 110 123, 110 146 Z" fill="#1d4ed8"/>
+                    <path d="M110 146 C110 120, 140 120, 140 146 Z" fill="#0B2545"/>
+                    <path d="M136 146 C136 123, 168 123, 168 146 Z" fill="#1d4ed8"/>
+                    <path d="M60 142 Q110 150 110 166 Q110 150 160 142 L164 164 Q110 174 110 180 Q110 174 56 164 Z" fill="#ffffff" stroke="#0B2545" stroke-width="2.5"/>
+                    <path d="M58 161 Q110 171 110 177 Q110 171 162 161" fill="none" stroke="#D4AF37" stroke-width="2.5"/>
+                    <text x="86" y="156" text-anchor="middle" font-size="6.5" font-weight="bold" fill="#0B2545" font-family="Georgia">Stronger</text>
+                    <text x="134" y="156" text-anchor="middle" font-size="6.5" font-weight="bold" fill="#0B2545" font-family="Georgia">Together</text>
+                    <text font-family="Inter, Arial, sans-serif" font-size="9.5" font-weight="800" fill="#0B2545" letter-spacing="0.8">
+                      <textPath href="#pdfBottomArc" startOffset="50%" text-anchor="middle">ONE FAMILY • SUPPORT • GROW • SERVE</textPath>
+                    </text>
+                  </svg>
+                </div>
+                <div>
+                  <p class="font-sans text-[8pt] font-extrabold uppercase tracking-[0.14em] text-[#9A6F08] m-0">Brotherhood and Sisterhood Program</p>
+                  <h1 class="text-[15pt] font-bold text-[#0B2545] leading-tight m-0">MEMBERSHIP REGISTRATION DOSSIER</h1>
+                  <p class="text-[8.2pt] italic text-slate-600 m-0 mt-0.5">Governed by the 2026 Constitution • Motto: “ONE FAMILY, SUPPORT, GROW AND SERVE.”</p>
+                  <div class="mt-1.5 flex items-center gap-3 font-sans text-[8pt]">
+                    <span class="bg-slate-100 border border-slate-300 px-2 py-0.5 rounded font-mono font-bold text-[#0B2545]">ID: <span id="a4-memberNo">BS-2026-0001</span></span>
+                    <span class="bg-slate-100 border border-slate-300 px-2 py-0.5 rounded">Date: <strong id="a4-regDate">—</strong></span>
+                    <span id="a4-status-badge" class="px-2 py-0.5 rounded font-bold bg-amber-100 text-amber-800">PENDING</span>
+                  </div>
+                </div>
+              </div>
+              <div class="a4-passport-frame">
+                <img id="a4-photo" src="" alt="Member Passport Photo" class="hidden" />
+                <div id="a4-photo-empty" class="text-center p-2 font-sans text-[7pt] text-slate-500 leading-tight">
+                  <strong class="block text-[#0B2545] mb-1">PASSPORT PHOTO</strong>
+                  35mm × 45mm<br/>Official Seal
+                </div>
+              </div>
+            </header>
+
+            <!-- Section A: Personal Particulars (Article 4) -->
+            <h2 class="a4-h2">Section A: Personal Particulars &amp; Identification (Article 4)</h2>
+            <table class="a4-table">
+              <tbody>
+                <tr>
+                  <th style="width: 22%;">Full Legal Name</th>
+                  <td colspan="3" id="a4-fullName" class="font-bold text-[9.5pt]">—</td>
+                </tr>
+                <tr>
+                  <th>Gender / Fellowship</th>
+                  <td id="a4-gender" style="width: 28%;">—</td>
+                  <th style="width: 22%;">Date of Birth</th>
+                  <td id="a4-dob" style="width: 28%;">—</td>
+                </tr>
+                <tr>
+                  <th>National ID / Passport</th>
+                  <td id="a4-nationalId">—</td>
+                  <th>Marital Status</th>
+                  <td id="a4-marital">—</td>
+                </tr>
+                <tr>
+                  <th>Primary Telephone</th>
+                  <td id="a4-phone" class="font-semibold">—</td>
+                  <th>Email Address</th>
+                  <td id="a4-email">—</td>
+                </tr>
+                <tr>
+                  <th>Residence / Address</th>
+                  <td id="a4-residence">—</td>
+                  <th>Occupation / Trade</th>
+                  <td id="a4-occupation">—</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Section B: Next of Kin & Welfare Support (Article 3) -->
+            <h2 class="a4-h2">Section B: Next of Kin &amp; Welfare Beneficiary (Article 3)</h2>
+            <table class="a4-table">
+              <tbody>
+                <tr>
+                  <th style="width: 22%;">Next of Kin Name</th>
+                  <td id="a4-emergencyName" style="width: 28%;">—</td>
+                  <th style="width: 22%;">Relationship</th>
+                  <td id="a4-emergencyRel" style="width: 28%;">—</td>
+                </tr>
+                <tr>
+                  <th>Emergency Telephone</th>
+                  <td colspan="3" id="a4-emergencyPhone" class="font-semibold">—</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Section C: Constitutional Declaration & Oath (Articles 4, 5, 8, 9 & 11) -->
+            <h2 class="a4-h2">Section C: Constitutional Declaration &amp; Oath (Articles 4, 5, 8, 9 &amp; 11)</h2>
+            <div class="border-l-4 border-[#0B2545] bg-slate-50 px-3 py-1.5 text-[8pt] leading-snug text-slate-800">
+              <p class="m-0 mb-1">I, <strong id="a4-oath-name">the undersigned applicant</strong>, affirm that I believe in the Vision (Art. 2a) and Mission (Art. 2b) of <strong>Brotherhood and Sisterhood</strong> and voluntarily bind myself to the Constitution adopted in 2026:</p>
+              <ul class="m-0 pl-4 space-y-0.5">
+                <li><strong>Rights, Conduct &amp; Peace (Articles 4, 5 &amp; 9):</strong> To participate positively, respect and encourage fellow members, attend scheduled meetings (Art. 7), maintain honesty and confidentiality, and avoid gossip, discrimination, and unnecessary conflicts.</li>
+                <li><strong>Mutual Welfare &amp; Finances (Articles 3 &amp; 8):</strong> To promote love, peace, spiritual and personal growth, and honour transparently managed contributions for group activities and welfare support during sickness or loss.</li>
+                <li><strong>Final Commitment (Article 11):</strong> To stand together with fellow brothers and sisters in good and difficult times toward building a strong and meaningful family.</li>
+              </ul>
+            </div>
+
+            <table class="a4-table mt-1.5">
+              <thead>
+                <tr>
+                  <th style="width: 44%;">Applicant / Member Full Name</th>
+                  <th style="width: 36%;">Member Digital Signature</th>
+                  <th style="width: 20%;">Date Signed</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td id="a4-sig-name" class="font-semibold">—</td>
+                  <td class="sig-script" id="a4-member-script-sig"></td>
+                  <td id="a4-sig-date">—</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Section D: Official Leadership Approval & Signatories (Article 6) -->
+            <h2 class="a4-h2">Section D: Official Leadership Approval &amp; Signatories (Article 6)</h2>
+            <div class="flex items-stretch gap-2.5">
+              <table class="a4-table flex-1">
+                <thead>
+                  <tr>
+                    <th style="width: 26%;">Executive Office</th>
+                    <th style="width: 32%;">Authorizing Leader</th>
+                    <th style="width: 26%;">Signature</th>
+                    <th style="width: 16%;">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Chairperson</strong></td>
+                    <td id="a4-chair-name" class="font-semibold"></td>
+                    <td id="a4-chair-sign" class="sig-script"></td>
+                    <td id="a4-chair-date"></td>
+                  </tr>
+                  <tr>
+                    <td><strong>General Secretary</strong></td>
+                    <td id="a4-sec-name" class="font-semibold"></td>
+                    <td id="a4-sec-sign" class="sig-script"></td>
+                    <td id="a4-sec-date"></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Treasurer</strong></td>
+                    <td id="a4-treas-name" class="font-semibold"></td>
+                    <td id="a4-treas-sign" class="sig-script"></td>
+                    <td id="a4-treas-date"></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Welfare Coordinator</strong></td>
+                    <td id="a4-welfare-name" class="font-semibold"></td>
+                    <td id="a4-welfare-sign" class="sig-script"></td>
+                    <td id="a4-welfare-date"></td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <!-- Official Circular Verification Seal (Visible when Approved) -->
+              <div id="a4-approved-seal-box" class="hidden flex flex-col items-center justify-center px-1">
+                <div class="official-seal-stamp">
+                  <span class="text-[5.5pt] font-extrabold tracking-wider text-[#9A6F08]">BROTHERHOOD &amp; SISTERHOOD</span>
+                  <span class="text-[7pt] font-black leading-tight my-0.5">APPROVED<br/>&amp; VERIFIED</span>
+                  <span class="text-[5pt] font-bold">2026 REGISTRY</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <footer class="pt-1.5 border-t border-slate-300 flex justify-between items-center font-sans text-[7.3pt] text-slate-500">
+            <span>Constitution of Brotherhood and Sisterhood • Official Membership Dossier (Adopted 2026)</span>
+            <span>Motto: “ONE FAMILY, SUPPORT, GROW AND SERVE.” • Page 1 of 1</span>
+          </footer>
+        </article>
+      </div>
+    </section>
+
+    <!-- TAB 4: OFFICIAL CONSTITUTION VIEW & A4 PDF GENERATOR -->
+    <section id="view-constitution" class="hidden space-y-4">
+      <div class="no-print bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <span class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-[#0B2545] text-[#D4AF37]">
+            <i data-lucide="book-open" class="w-5 h-5"></i>
+          </span>
+          <div>
+            <h2 class="text-base font-bold text-[#0B2545]">CONSTITUTION OF BROTHERHOOD AND SISTERHOOD.</h2>
+            <p class="text-xs text-slate-500">Official Charter Document • Download as A4 PDF or print directly.</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="downloadConstitutionA4PDF()" id="btn-download-constitution-pdf" class="px-5 py-2.5 text-sm font-bold bg-[#0B2545] hover:bg-[#081b33] text-white rounded-lg shadow transition flex items-center gap-2">
+            <i data-lucide="download" class="w-4 h-4 text-[#D4AF37]"></i>
+            <span>Download Constitution A4 PDF</span>
+          </button>
+          <button onclick="window.print()" class="px-3.5 py-2.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition flex items-center gap-1.5" title="Browser Print Dialog">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            <span>Print</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="constitution-print-wrapper" class="overflow-x-auto pb-8">
+        <article id="constitution-a4-sheet" class="max-w-[210mm] mx-auto bg-white text-slate-800 border border-slate-300 shadow-xl p-8 sm:p-12 space-y-5" style="font-family: 'Georgia', 'Times New Roman', serif;">
+          <header class="flex flex-col sm:flex-row items-center gap-5 pb-5 border-b-4 border-double border-[#0B2545]">
+            <img src="328904.jpg" alt="Brotherhood and Sisterhood Logo" onerror="this.src='https://placehold.co/140x140/0B2545/D4AF37?text=B%26S+Logo'" class="w-28 h-28 object-contain flex-shrink-0 rounded-full border-2 border-[#D4AF37] bg-white p-1" />
+            <div class="text-center sm:text-left flex-1">
+              <p class="font-sans text-xs font-bold uppercase tracking-widest text-[#9A6F08]">Official Governing Document</p>
+              <h1 class="text-xl sm:text-2xl font-bold text-[#0B2545] mt-1">CONSTITUTION OF BROTHERHOOD AND SISTERHOOD.</h1>
+              <p class="text-xs italic text-slate-600 mt-1">MOTTO:."ONE FAMILY, SUPPORT, GROW AND SERVE. "</p>
+            </div>
+          </header>
+
+          <div class="space-y-4 text-sm leading-relaxed">
+            <div>
+              <h2 class="font-sans text-sm font-extrabold uppercase text-[#0B2545] border-b border-[#D4AF37] pb-1 mb-2">INTRODUCTION:</h2>
+              <p class="bg-slate-50 border-l-4 border-[#0B2545] p-3 rounded-r">We, the members of the Brotherhood and Sisterhood Program, commit ourselves to building a family founded on love, unity, respect, trust and mutual support. We adopt this constitution to guide our activities, relationships.</p>
+            </div>
+
+            <div>
+              <h2 class="font-sans text-sm font-extrabold uppercase text-[#0B2545] border-b border-[#D4AF37] pb-1 mb-2">ARTICLE 1:NAME OF THE GROUP BROTHERHOOD AND SISTERHOOD</h2>
+            </div>
+
+            <div>
+              <h2 class="font-sans text-sm font-extrabold uppercase text-[#0B2545] border-b border-[#D4AF37] pb-1 mb-2">ARTICLE 2a:VISION</h2>
+              <p>To build a united and loving family where everyone feels valued, supported and encouraged.</p>
+            </div>
+
+            <div>
+              <h2 class="font-sans text-sm font-extrabold uppercase text-[#0B2545] border-b border-[#D4AF37] pb-1 mb-2">2b: MISSION</h2>
+              <p>To promote love, unity, spiritual growth, personal development and mutual support among members.</p>
+            </div>
+
+            <div>
+              <h2 class="font-sans text-sm font-extrabold uppercase text-[#0B2545] border-b border-[#D4AF37] pb-1 mb-2">ARTICLE 3: OBJECTIVES</h2>
+              <ul class="list-disc pl-5 space-y-1">
+                <li>To promote love, peace and togetherness.</li>
+                <li>To support one another during difficult times.(sickness,loss,etc</li>
+                <li>To encourage spiritual and personal growth among members.</li>
+                <li>To encourage savings and economic growth among members.</li>
+              </ul>
+            </div>
+
+            <div>
+              <h2 class="font-sans text-sm font-extrabold uppercase text-[#0B2545] border-b border-[#D4AF37] pb-1 mb-2">ARTICLE 4: MEMBERSHIP</h2>
+              <p>Membership is open to anyone who believes in the vision and values of the program and is willing to participate positively.</p>
+            </div>
+
+            <div>
+              <h2 class="font-sans text-sm font-extrabold uppercase text-[#0B2545] border-b border-[#D4AF37] pb-1 mb-2">ARTICLE 5: RIGHTS AND RESPONSIBILITIES</h2>
+              <p class="mb-1">Every member has the right to be respected, heard and supported. Members are expected to:</p>
+              <ul class="list-disc pl-5 space-y-1">
+                <li>Respect one another.</li>
+                <li>Attend meetings and participate .</li>
+                <li>Maintain honesty and confidentiality.</li>
+                <li>Support and encourage fellow members.</li>
+                <li>Avoid gossip, discrimination and unnecessary conflicts.</li>
+              </ul>
+            </div>
+
+            <div>
+              <h2 class="font-sans text-sm font-extrabold uppercase text-[#0B2545] border-b border-[#D4AF37] pb-1 mb-2">ARTICLE 6: LEADERSHIP</h2>
+              <p class="mb-1">The leadership shall consist of:</p>
+              <ul class="list-disc pl-5 space-y-1">
+                <li>Chairperson</li>
+                <li>Vice Chairperson</li>
+                <li>General Secretary</li>
+                <li>Treasurer</li>
+                <li>Welfare Coordinator</li>
+              </ul>
+              <p class="mt-2 italic text-slate-700">NOTE; Leaders shall guide the organization and serve members with honesty, fairness and accountability.</p>
+            </div>
+
+            <div>
+              <h2 class="font-sans text-sm font-extrabold uppercase text-[#0B2545] border-b border-[#D4AF37] pb-1 mb-2">ARTICLE 7: MEETINGS</h2>
+              <ul class="list-disc pl-5 space-y-1">
+                <li>*General meetings to be held on.....</li>
+                <li>*Executive meetings to be held on .......</li>
+                <li>*Emergency meetings can be called upon ;</li>
+                <li>*Members shall meet regularly as agreed. *Decisions shall be made through discussion and mutual agreement or voting when necessary.</li>
+              </ul>
+            </div>
+
+            <div>
+              <h2 class="font-sans text-sm font-extrabold uppercase text-[#0B2545] border-b border-[#D4AF37] pb-1 mb-2">ARTICLE 8: FINANCES</h2>
+              <p>Members may agree on contributions to support group activities and welfare. All funds must be properly recorded, managed transparently and used for approved purposes.</p>
+            </div>
+
+            <div>
+              <h2 class="font-sans text-sm font-extrabold uppercase text-[#0B2545] border-b border-[#D4AF37] pb-1 mb-2">ARTICLE 9: DISCIPLINE AND CONFLICT RESOLUTION</h2>
+              <ul class="list-disc pl-5 space-y-1">
+                <li>*Members shall treat one another peacefully. *Misconduct shall be addressed through counselling, warnings or other fair disciplinary measures.</li>
+              </ul>
+            </div>
+
+            <div>
+              <h2 class="font-sans text-sm font-extrabold uppercase text-[#0B2545] border-b border-[#D4AF37] pb-1 mb-2">ARTICLE 10: AMENDMENTS</h2>
+              <p>This constitution may be changed with the approval of at least two-thirds of members present and eligible to vote.</p>
+            </div>
+
+            <div>
+              <h2 class="font-sans text-sm font-extrabold uppercase text-[#0B2545] border-b border-[#D4AF37] pb-1 mb-2">ARTICLE 11: FINAL COMMITMENT</h2>
+              <p>We commit ourselves to loving, respecting, encouraging and supporting one another. We shall stand together in good and difficult times and work towards building a strong and meaningful brotherhood and sisterhood.</p>
+            </div>
+
+            <div class="bg-amber-50 border-y-2 border-[#D4AF37] py-3 px-4 text-center font-bold text-[#0B2545]">
+              MOTTO:."ONE FAMILY, SUPPORT, GROW AND SERVE. "
+            </div>
+
+            <p class="font-bold text-[#0B2545] pt-1">Adopted on__/__/2026</p>
+
+            <div class="pt-2">
+              <h2 class="font-sans text-sm font-extrabold uppercase text-[#0B2545] border-b border-[#D4AF37] pb-1 mb-3">APPROVAL AND SIGNATURES</h2>
+              <div class="space-y-3 font-medium text-slate-900">
+                <p>Chairperson: __________________</p>
+                <p>Secretary: ____________________</p>
+                <p>Treasurer: ____________________</p>
+                <p>Date: _________________________</p>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL 1: SUPABASE CLOUD SETUP DRAWER / MODAL -->
+  <div id="modal-cloud-setup" class="no-print hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border-t-4 border-[#0B2545] max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-bold text-[#0B2545] flex items-center gap-2">
+          <i data-lucide="cloud" class="w-5 h-5 text-sky-600"></i>
+          Supabase Live Multi-Device Cloud Setup
+        </h3>
+        <button onclick="closeCloudSetupModal()" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+        Paste your Supabase <strong>Project URL</strong> and <strong>anon public key</strong> below to sync all member registrations, photos, and executive approvals across every member's device in real time.
+      </p>
+      <form onsubmit="saveSupabaseCredentials(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Supabase Project URL</label>
+          <input type="url" id="input-supabase-url" placeholder="https://xyzcompany.supabase.co" class="w-full px-3.5 py-2 text-xs font-mono border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0B2545] outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Supabase Anon Public Key</label>
+          <textarea id="input-supabase-key" rows="3" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="w-full px-3.5 py-2 text-xs font-mono border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0B2545] outline-none"></textarea>
+        </div>
+        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-[11px] text-slate-600">
+          <strong>Tip:</strong> You can also hardcode <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> directly at the top of this HTML file's <code>&lt;script&gt;</code> before uploading to GitHub Pages so every member connects automatically!
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200">
+          <button type="button" onclick="clearSupabaseCredentials()" class="px-3 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg">
+            Reset to Offline Mode
+          </button>
+          <div class="flex gap-2">
+            <button type="button" onclick="closeCloudSetupModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 rounded-lg">Cancel</button>
+            <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-[#0B2545] hover:bg-[#081b33] rounded-lg shadow">Connect Live Cloud</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: ADMIN LOGIN MODAL (Password: 123) -->
+  <div id="modal-admin-login" class="no-print hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border-t-4 border-[#D4AF37]">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-[#0B2545] flex items-center gap-2">
+          <i data-lucide="shield" class="w-5 h-5 text-[#D4AF37]"></i>
+          Executive Admin Access
+        </h3>
+        <button onclick="closeAdminLoginModal()" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-600 mb-4">Enter the executive password to unlock member editing, deletion, and Article 6 signatory approvals.</p>
+      <form onsubmit="submitAdminPassword(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Admin Password</label>
+          <input type="password" id="admin-password-input" required placeholder="Enter password..." class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#0B2545] outline-none" />
+          <p id="admin-login-error" class="hidden text-xs text-rose-600 font-semibold mt-1.5">Incorrect password. Please try again.</p>
+        </div>
+        <div class="flex justify-end gap-2">
+          <button type="button" onclick="closeAdminLoginModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg">Cancel</button>
+          <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-[#0B2545] hover:bg-[#081b33] rounded-lg shadow">Unlock Admin</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: DEFAULT LEADERSHIP NAMES SETTINGS (ARTICLE 6) -->
+  <div id="modal-leadership-defaults" class="no-print hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border-t-4 border-[#0B2545]">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-bold text-[#0B2545]">Default Executive Leaders (Article 6)</h3>
+        <button onclick="closeLeadershipDefaultsModal()" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-600 mb-4">Save your current executive names to Supabase <code>leadership_defaults</code> so any admin can stamp A4 dossiers with one click.</p>
+      <form onsubmit="saveLeadershipDefaults(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Chairperson Full Name</label>
+          <input type="text" id="def-chair-name" placeholder="e.g., Joannah M." class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">General Secretary Full Name</label>
+          <input type="text" id="def-sec-name" placeholder="e.g., Cissy Kmd" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Treasurer Full Name</label>
+          <input type="text" id="def-treas-name" placeholder="e.g., Tr. Betty Fund" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Welfare Coordinator Full Name</label>
+          <input type="text" id="def-welfare-name" placeholder="Coordinator Full Name" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg" />
+        </div>
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-200">
+          <button type="button" onclick="closeLeadershipDefaultsModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 rounded-lg">Cancel</button>
+          <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-[#0B2545] hover:bg-[#081b33] rounded-lg shadow">Save &amp; Sync Leaders</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 4: DELETE CONFIRMATION MODAL -->
+  <div id="modal-delete-confirm" class="no-print hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border-t-4 border-rose-600">
+      <h3 class="text-lg font-bold text-slate-900 mb-2">Delete Member Record?</h3>
+      <p class="text-xs text-slate-600 mb-5">This will permanently remove <strong id="delete-target-name">this member</strong> from the synced registry across all devices.</p>
+      <div class="flex justify-end gap-2">
+        <button onclick="closeDeleteModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg">Cancel</button>
+        <button onclick="confirmDeleteMember()" class="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow">Confirm Delete</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // =========================================================================
+  // 1. SUPABASE CONFIGURATION (Hardcode your credentials here OR via Cloud Setup UI)
+  // =========================================================================
+  const DEFAULT_SUPABASE_URL = "https://YOUR_PROJECT_ID.supabase.co";
+  const DEFAULT_SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+
+  const ADMIN_PASSWORD = "123";
+  const STORAGE_KEYS = {
+    SB_URL: "bhs_supabase_url_v1",
+    SB_KEY: "bhs_supabase_key_v1",
+    MEMBERS: "bhs_members_offline_v1",
+    LEADERS: "bhs_leadership_defaults_v1"
+  };
+
+  let sb = null;
+  let isSupabaseLive = false;
+  let realtimeChannel = null;
+
+  let membersList = [];
+  let leadershipDefaults = {
+    chairperson_name: "",
+    secretary_name: "",
+    treasurer_name: "",
+    welfare_name: ""
+  };
+
+  let isAdmin = false;
+  let currentPhotoDataUrl = "";
+  let mediaStream = null;
+  let facingMode = "user";
+  let editingRecordId = null;
+  let currentPreviewMember = null;
+  let pendingDeleteId = null;
+
+  // =========================================================================
+  // 2. TOAST NOTIFICATION SYSTEM (Zero alert()/confirm() usage)
+  // =========================================================================
+  function showToast(message, type = "info") {
+    const container = document.getElementById("toast-container");
+    const toast = document.createElement("div");
+    const styles = {
+      success: "bg-emerald-800 text-white border-emerald-400",
+      error: "bg-rose-800 text-white border-rose-400",
+      info: "bg-[#0B2545] text-white border-[#D4AF37]"
+    };
+    toast.className = `px-4 py-3 rounded-xl shadow-xl border-l-4 text-xs font-semibold flex items-center gap-2 transition-all ${styles[type] || styles.info}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      setTimeout(() => toast.remove(), 300);
+    }, 3600);
+  }
+
+  // =========================================================================
+  // 3. SUPABASE INITIALIZATION & REAL-TIME SYNC ENGINE
+  // =========================================================================
+  function getActiveSupabaseConfig() {
+    const savedUrl = localStorage.getItem(STORAGE_KEYS.SB_URL);
+    const savedKey = localStorage.getItem(STORAGE_KEYS.SB_KEY);
+    const url = savedUrl || DEFAULT_SUPABASE_URL;
+    const key = savedKey || DEFAULT_SUPABASE_ANON_KEY;
+
+    const isConfigured =
+      url &&
+      key &&
+      !url.includes("YOUR_PROJECT_ID") &&
+      !key.includes("YOUR_SUPABASE_ANON_KEY") &&
+      url.startsWith("https://");
+
+    return { url, key, isConfigured };
+  }
+
+  async function initDataLayer() {
+    // Load local cache first for immediate rendering
+    try {
+      const cachedMembers = JSON.parse(localStorage.getItem(STORAGE_KEYS.MEMBERS));
+      if (Array.isArray(cachedMembers)) membersList = cachedMembers;
+      const cachedLeaders = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEADERS));
+      if (cachedLeaders) leadershipDefaults = { ...leadershipDefaults, ...cachedLeaders };
+    } catch (e) {}
+
+    updateMemberCount();
+    renderDirectory();
+
+    const { url, key, isConfigured } = getActiveSupabaseConfig();
+    if (!isConfigured || typeof window.supabase === "undefined") {
+      setSyncUIState(false, "Local Offline Demo Mode");
+      return;
+    }
+
+    try {
+      sb = window.supabase.createClient(url, key);
+      await fetchMembersFromSupabase();
+      await fetchLeadershipDefaultsFromSupabase();
+      subscribeToSupabaseRealtime();
+      isSupabaseLive = true;
+      setSyncUIState(true, "Supabase Live Cloud");
+    } catch (err) {
+      console.error("Supabase connection failed, falling back to offline mode:", err);
+      isSupabaseLive = false;
+      setSyncUIState(false, "Local Offline Demo Mode");
+    }
+  }
+
+  function setSyncUIState(live, label) {
+    const btn = document.getElementById("sync-status-btn");
+    const dot = document.getElementById("sync-dot");
+    const txt = document.getElementById("sync-status-text");
+    txt.textContent = label;
+    if (live) {
+      btn.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-200 border border-emerald-400/40 hover:bg-emerald-500/30 transition cursor-pointer";
+      dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+    } else {
+      btn.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-200 border border-amber-400/40 hover:bg-amber-500/30 transition cursor-pointer";
+      dot.className = "w-2 h-2 rounded-full bg-amber-400";
+    }
+  }
+
+  async function fetchMembersFromSupabase() {
+    if (!sb) return;
+    const { data, error } = await sb
+      .from("members")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    membersList = data || [];
+    localStorage.setItem(STORAGE_KEYS.MEMBERS, JSON.stringify(membersList));
+    updateMemberCount();
+    renderDirectory();
+    if (!editingRecordId) {
+      document.getElementById("field-memberNo").value = generateMemberNumber();
+    }
+  }
+
+  async function fetchLeadershipDefaultsFromSupabase() {
+    if (!sb) return;
+    const { data, error } = await sb
+      .from("leadership_defaults")
+      .select("*")
+      .eq("id", 1)
+      .maybeSingle();
+
+    if (!error && data) {
+      leadershipDefaults = {
+        chairperson_name: data.chairperson_name || "",
+        secretary_name: data.secretary_name || "",
+        treasurer_name: data.treasurer_name || "",
+        welfare_name: data.welfare_name || ""
+      };
+      localStorage.setItem(STORAGE_KEYS.LEADERS, JSON.stringify(leadershipDefaults));
+    }
+  }
+
+  function subscribeToSupabaseRealtime() {
+    if (!sb) return;
+    if (realtimeChannel) {
+      sb.removeChannel(realtimeChannel);
+    }
+    realtimeChannel = sb
+      .channel("brotherhood-realtime-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "members" },
+        async () => {
+          await fetchMembersFromSupabase();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "leadership_defaults" },
+        async () => {
+          await fetchLeadershipDefaultsFromSupabase();
+        }
+      )
+      .subscribe();
+  }
+
+  // Cloud Setup Modal Handlers
+  function openCloudSetupModal() {
+    const { url, key, isConfigured } = getActiveSupabaseConfig();
+    document.getElementById("input-supabase-url").value = isConfigured ? url : "";
+    document.getElementById("input-supabase-key").value = isConfigured ? key : "";
+    document.getElementById("modal-cloud-setup").classList.remove("hidden");
+  }
+
+  function closeCloudSetupModal() {
+    document.getElementById("modal-cloud-setup").classList.add("hidden");
+  }
+
+  async function saveSupabaseCredentials(event) {
+    event.preventDefault();
+    const url = document.getElementById("input-supabase-url").value.trim();
+    const key = document.getElementById("input-supabase-key").value.trim();
+    if (!url || !key) {
+      showToast("Please enter both Supabase Project URL and Anon Key.", "error");
+      return;
+    }
+    localStorage.setItem(STORAGE_KEYS.SB_URL, url);
+    localStorage.setItem(STORAGE_KEYS.SB_KEY, key);
+    closeCloudSetupModal();
+    showToast("Connecting to Supabase Live Cloud...", "info");
+    await initDataLayer();
+    if (isSupabaseLive) {
+      showToast("Connected! Live multi-device sync is now active.", "success");
+    } else {
+      showToast("Could not verify Supabase credentials. Check URL/Key & SQL schema.", "error");
+    }
+  }
+
+  function clearSupabaseCredentials() {
+    localStorage.removeItem(STORAGE_KEYS.SB_URL);
+    localStorage.removeItem(STORAGE_KEYS.SB_KEY);
+    isSupabaseLive = false;
+    sb = null;
+    setSyncUIState(false, "Local Offline Demo Mode");
+    closeCloudSetupModal();
+    showToast("Switched to Local Offline Demo Mode.", "info");
+  }
+
+  // =========================================================================
+  // 4. DOM INITIALIZATION & NAVIGATION
+  // =========================================================================
+  document.addEventListener("DOMContentLoaded", () => {
+    lucide.createIcons();
+    resetForm();
+    initDataLayer();
+  });
+
+  function generateMemberNumber() {
+    const nextNum = String(membersList.length + 1).padStart(4, "0");
+    return `BS-2026-${nextNum}`;
+  }
+
+  function getTodayISO() {
+    return new Date().toISOString().split("T")[0];
+  }
+
+  function updateMemberCount() {
+    document.getElementById("member-count").textContent = membersList.length;
+  }
+
+  function switchTab(tab) {
+    ["register", "directory", "preview", "constitution"].forEach((t) => {
+      document.getElementById(`view-${t}`).classList.add("hidden");
+      const btn = document.getElementById(`tab-btn-${t}`);
+      btn.className = "px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-white/10 hover:bg-white/20 text-white transition flex items-center gap-1.5";
+    });
+    document.getElementById(`view-${tab}`).classList.remove("hidden");
+    const activeBtn = document.getElementById(`tab-btn-${tab}`);
+    activeBtn.className = "px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-[#D4AF37] text-[#0B2545] shadow transition flex items-center gap-1.5";
+
+    if (tab !== "register") stopCamera();
+    if (tab === "directory") renderDirectory();
+  }
+
+  // =========================================================================
+  // 5. ADMIN MODE (PASSWORD: 123) & EXECUTIVE SIGNATORIES (ARTICLE 6)
+  // =========================================================================
+  function toggleAdminAuth() {
+    if (isAdmin) {
+      lockAdminMode();
+    } else {
+      document.getElementById("admin-password-input").value = "";
+      document.getElementById("admin-login-error").classList.add("hidden");
+      document.getElementById("modal-admin-login").classList.remove("hidden");
+      setTimeout(() => document.getElementById("admin-password-input").focus(), 50);
+    }
+  }
+
+  function closeAdminLoginModal() {
+    document.getElementById("modal-admin-login").classList.add("hidden");
+  }
+
+  function submitAdminPassword(event) {
+    event.preventDefault();
+    const entered = document.getElementById("admin-password-input").value.trim();
+    if (entered === ADMIN_PASSWORD) {
+      isAdmin = true;
+      closeAdminLoginModal();
+      updateAdminUIState();
+      showToast("Admin Mode unlocked! Edit, Delete & Executive Signatories enabled.", "success");
+    } else {
+      document.getElementById("admin-login-error").classList.remove("hidden");
+    }
+  }
+
+  function lockAdminMode() {
+    isAdmin = false;
+    if (editingRecordId) resetForm();
+    updateAdminUIState();
+    showToast("Admin Mode locked.", "info");
+  }
+
+  function updateAdminUIState() {
+    const toggleBtn = document.getElementById("admin-toggle-btn");
+    const toggleLabel = document.getElementById("admin-toggle-label");
+    const banner = document.getElementById("admin-banner");
+    const sigPanel = document.getElementById("admin-signatories-panel");
+    const previewEditBtn = document.getElementById("preview-admin-edit-btn");
+    const previewQuickBar = document.getElementById("preview-quick-sign-bar");
+
+    if (isAdmin) {
+      toggleBtn.className = "px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow transition flex items-center gap-1.5";
+      toggleLabel.textContent = "Admin Unlocked";
+      banner.classList.remove("hidden");
+      sigPanel.classList.remove("hidden");
+      previewEditBtn.classList.remove("hidden");
+      if (currentPreviewMember && currentPreviewMember.id) {
+        previewQuickBar.classList.remove("hidden");
+      }
+    } else {
+      toggleBtn.className = "px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-400/40 transition flex items-center gap-1.5";
+      toggleLabel.textContent = "Admin Login";
+      banner.classList.add("hidden");
+      sigPanel.classList.add("hidden");
+      previewEditBtn.classList.add("hidden");
+      previewQuickBar.classList.add("hidden");
+    }
+    renderDirectory();
+  }
+
+  function openLeadershipDefaultsModal() {
+    document.getElementById("def-chair-name").value = leadershipDefaults.chairperson_name || "";
+    document.getElementById("def-sec-name").value = leadershipDefaults.secretary_name || "";
+    document.getElementById("def-treas-name").value = leadershipDefaults.treasurer_name || "";
+    document.getElementById("def-welfare-name").value = leadershipDefaults.welfare_name || "";
+    document.getElementById("modal-leadership-defaults").classList.remove("hidden");
+  }
+
+  function closeLeadershipDefaultsModal() {
+    document.getElementById("modal-leadership-defaults").classList.add("hidden");
+  }
+
+  async function saveLeadershipDefaults(event) {
+    event.preventDefault();
+    leadershipDefaults = {
+      chairperson_name: document.getElementById("def-chair-name").value.trim(),
+      secretary_name: document.getElementById("def-sec-name").value.trim(),
+      treasurer_name: document.getElementById("def-treas-name").value.trim(),
+      welfare_name: document.getElementById("def-welfare-name").value.trim()
+    };
+    localStorage.setItem(STORAGE_KEYS.LEADERS, JSON.stringify(leadershipDefaults));
+
+    if (isSupabaseLive && sb) {
+      try {
+        // Try RPC first if strict backend RLS is enabled, otherwise standard table update
+        const { error: rpcErr } = await sb.rpc("admin_save_leadership_defaults", {
+          p_password: ADMIN_PASSWORD,
+          p_chairperson_name: leadershipDefaults.chairperson_name,
+          p_secretary_name: leadershipDefaults.secretary_name,
+          p_treasurer_name: leadershipDefaults.treasurer_name,
+          p_welfare_name: leadershipDefaults.welfare_name
+        });
+        if (rpcErr) {
+          await sb
+            .from("leadership_defaults")
+            .upsert({ id: 1, ...leadershipDefaults });
+        }
+      } catch (err) {
+        console.error("Failed syncing leadership defaults:", err);
+      }
+    }
+    closeLeadershipDefaultsModal();
+    showToast("Default executive leaders saved & synced!", "success");
+  }
+
+  function applyLeadershipDefaultsToForm() {
+    const today = getTodayISO();
+    document.getElementById("sig-chair-name").value = leadershipDefaults.chairperson_name || "";
+    document.getElementById("sig-chair-sign").value = leadershipDefaults.chairperson_name || "";
+    if (leadershipDefaults.chairperson_name) document.getElementById("sig-chair-date").value = today;
+
+    document.getElementById("sig-sec-name").value = leadershipDefaults.secretary_name || "";
+    document.getElementById("sig-sec-sign").value = leadershipDefaults.secretary_name || "";
+    if (leadershipDefaults.secretary_name) document.getElementById("sig-sec-date").value = today;
+
+    document.getElementById("sig-treas-name").value = leadershipDefaults.treasurer_name || "";
+    document.getElementById("sig-treas-sign").value = leadershipDefaults.treasurer_name || "";
+    if (leadershipDefaults.treasurer_name) document.getElementById("sig-treas-date").value = today;
+
+    document.getElementById("sig-welfare-name").value = leadershipDefaults.welfare_name || "";
+    document.getElementById("sig-welfare-sign").value = leadershipDefaults.welfare_name || "";
+    if (leadershipDefaults.welfare_name) document.getElementById("sig-welfare-date").value = today;
+
+    document.getElementById("field-approvalStatus").value = "Approved";
+    showToast("Applied default executive signatories to form.", "info");
+  }
+
+  // =========================================================================
+  // 6. WEBCAM & UPLOAD PASSPORT PHOTO CAPTURE (350x450 JPEG COMPRESSED)
+  // =========================================================================
+  async function startCamera() {
+    const errorEl = document.getElementById("camera-error");
+    errorEl.classList.add("hidden");
+    stopCameraStreamOnly();
+    try {
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 800 }, facingMode: facingMode },
+        audio: false
+      });
+      const video = document.getElementById("camera-stream");
+      video.srcObject = mediaStream;
+      video.classList.remove("hidden");
+      document.getElementById("photo-preview").classList.add("hidden");
+      document.getElementById("photo-placeholder").classList.add("hidden");
+      document.getElementById("camera-guide").classList.remove("hidden");
+
+      document.getElementById("btn-start-cam").classList.add("hidden");
+      document.getElementById("btn-switch-cam").classList.remove("hidden");
+      document.getElementById("btn-capture-cam").classList.remove("hidden");
+      document.getElementById("btn-stop-cam").classList.remove("hidden");
+    } catch (err) {
+      errorEl.textContent = "Camera unavailable or permission denied. Please upload a photo file below.";
+      errorEl.classList.remove("hidden");
+    }
+  }
+
+  function switchCameraFacing() {
+    facingMode = facingMode === "user" ? "environment" : "user";
+    startCamera();
+  }
+
+  function stopCameraStreamOnly() {
+    if (mediaStream) {
+      mediaStream.getTracks().forEach((track) => track.stop());
+      mediaStream = null;
+    }
+  }
+
+  function stopCamera() {
+    stopCameraStreamOnly();
+    document.getElementById("camera-stream").classList.add("hidden");
+    document.getElementById("camera-guide").classList.add("hidden");
+    document.getElementById("btn-start-cam").classList.remove("hidden");
+    document.getElementById("btn-switch-cam").classList.add("hidden");
+    document.getElementById("btn-capture-cam").classList.add("hidden");
+    document.getElementById("btn-stop-cam").classList.add("hidden");
+
+    if (currentPhotoDataUrl) {
+      document.getElementById("photo-preview").classList.remove("hidden");
+    } else {
+      document.getElementById("photo-placeholder").classList.remove("hidden");
+    }
+  }
+
+  function capturePhoto() {
+    const video = document.getElementById("camera-stream");
+    const canvas = document.getElementById("photo-canvas");
+    const ctx = canvas.getContext("2d");
+
+    const targetRatio = 350 / 450;
+    const vw = video.videoWidth || 640;
+    const vh = video.videoHeight || 480;
+    const sourceRatio = vw / vh;
+
+    let sx = 0, sy = 0, sw = vw, sh = vh;
+    if (sourceRatio > targetRatio) {
+      sw = vh * targetRatio;
+      sx = (vw - sw) / 2;
+    } else {
+      sh = vw / targetRatio;
+      sy = (vh - sh) / 2;
+    }
+
+    ctx.drawImage(video, sx, sy, sw, sh, 0, 0, 350, 450);
+    currentPhotoDataUrl = canvas.toDataURL("image/jpeg", 0.78);
+
+    const preview = document.getElementById("photo-preview");
+    preview.src = currentPhotoDataUrl;
+    preview.classList.remove("hidden");
+    stopCamera();
+    showToast("Passport photo captured!", "success");
+  }
+
+  function handlePhotoUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.getElementById("photo-canvas");
+        const ctx = canvas.getContext("2d");
+        const targetRatio = 350 / 450;
+        const sourceRatio = img.width / img.height;
+        let sx = 0, sy = 0, sw = img.width, sh = img.height;
+        if (sourceRatio > targetRatio) {
+          sw = img.height * targetRatio;
+          sx = (img.width - sw) / 2;
+        } else {
+          sh = img.width / targetRatio;
+          sy = (img.height - sh) / 2;
+        }
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 350, 450);
+        currentPhotoDataUrl = canvas.toDataURL("image/jpeg", 0.78);
+        const preview = document.getElementById("photo-preview");
+        preview.src = currentPhotoDataUrl;
+        preview.classList.remove("hidden");
+        document.getElementById("photo-placeholder").classList.add("hidden");
+        stopCamera();
+        showToast("Passport photo uploaded & cropped to 35×45mm!", "success");
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // =========================================================================
+  // 7. SAVE, EDIT, APPROVE & DELETE MEMBER RECORDS (SUPABASE + OFFLINE)
+  // =========================================================================
+  function resetForm() {
+    editingRecordId = null;
+    document.getElementById("registration-form").reset();
+    document.getElementById("form-heading").textContent = "Constitutional Membership Registration";
+    document.getElementById("editing-badge").classList.add("hidden");
+    document.getElementById("field-memberNo").value = generateMemberNumber();
+    document.getElementById("field-regDate").value = getTodayISO();
+    document.getElementById("field-approvalStatus").value = "Pending";
+    currentPhotoDataUrl = "";
+    document.getElementById("photo-preview").classList.add("hidden");
+    document.getElementById("photo-placeholder").classList.remove("hidden");
+    stopCamera();
+  }
+
+  async function handleSaveMember(event) {
+    event.preventDefault();
+
+    if (editingRecordId && !isAdmin) {
+      showToast("Admin password required to edit existing members.", "error");
+      return;
+    }
+
+    const existing = editingRecordId ? membersList.find((m) => m.id === editingRecordId) : null;
+
+    const payload = {
+      member_no: document.getElementById("field-memberNo").value.trim(),
+      full_name: document.getElementById("field-fullName").value.trim(),
+      gender: document.getElementById("field-gender").value,
+      date_of_birth: document.getElementById("field-dob").value || null,
+      national_id: document.getElementById("field-nationalId").value.trim(),
+      phone: document.getElementById("field-phone").value.trim(),
+      email: document.getElementById("field-email").value.trim() || "",
+      residence: document.getElementById("field-residence").value.trim(),
+      occupation: document.getElementById("field-occupation").value.trim() || "",
+      marital_status: document.getElementById("field-marital").value,
+      emergency_name: document.getElementById("field-emergencyName").value.trim(),
+      emergency_relationship: document.getElementById("field-emergencyRel").value.trim(),
+      emergency_phone: document.getElementById("field-emergencyPhone").value.trim(),
+      registration_date: document.getElementById("field-regDate").value || getTodayISO(),
+      passport_photo: currentPhotoDataUrl || "",
+      constitutional_oath: document.getElementById("field-oath").checked,
+
+      approval_status: isAdmin
+        ? document.getElementById("field-approvalStatus").value
+        : existing?.approval_status || "Pending",
+      chairperson_name: isAdmin
+        ? document.getElementById("sig-chair-name").value.trim()
+        : existing?.chairperson_name || "",
+      chairperson_sign: isAdmin
+        ? document.getElementById("sig-chair-sign").value.trim()
+        : existing?.chairperson_sign || "",
+      chairperson_date: isAdmin
+        ? document.getElementById("sig-chair-date").value
+        : existing?.chairperson_date || "",
+      secretary_name: isAdmin
+        ? document.getElementById("sig-sec-name").value.trim()
+        : existing?.secretary_name || "",
+      secretary_sign: isAdmin
+        ? document.getElementById("sig-sec-sign").value.trim()
+        : existing?.secretary_sign || "",
+      secretary_date: isAdmin
+        ? document.getElementById("sig-sec-date").value
+        : existing?.secretary_date || "",
+      treasurer_name: isAdmin
+        ? document.getElementById("sig-treas-name").value.trim()
+        : existing?.treasurer_name || "",
+      treasurer_sign: isAdmin
+        ? document.getElementById("sig-treas-sign").value.trim()
+        : existing?.treasurer_sign || "",
+      treasurer_date: isAdmin
+        ? document.getElementById("sig-treas-date").value
+        : existing?.treasurer_date || "",
+      welfare_name: isAdmin
+        ? document.getElementById("sig-welfare-name").value.trim()
+        : existing?.welfare_name || "",
+      welfare_sign: isAdmin
+        ? document.getElementById("sig-welfare-sign").value.trim()
+        : existing?.welfare_sign || "",
+      welfare_date: isAdmin
+        ? document.getElementById("sig-welfare-date").value
+        : existing?.welfare_date || ""
+    };
+
+    const btn = document.getElementById("btn-submit-member");
+    const origHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span> <span>Syncing Record...</span>`;
+
+    try {
+      let savedRecord = null;
+
+      if (isSupabaseLive && sb) {
+        if (editingRecordId) {
+          // Support strict RPC if configured, fallback to standard table update
+          const { data: rpcData, error: rpcErr } = await sb.rpc("admin_update_member", {
+            p_password: ADMIN_PASSWORD,
+            p_id: editingRecordId,
+            p_updates: payload
+          });
+          if (!rpcErr && rpcData) {
+            savedRecord = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+          } else {
+            const { data, error } = await sb
+              .from("members")
+              .update(payload)
+              .eq("id", editingRecordId)
+              .select()
+              .single();
+            if (error) throw error;
+            savedRecord = data;
+          }
+        } else {
+          const { data, error } = await sb
+            .from("members")
+            .insert([payload])
+            .select()
+            .single();
+          if (error) throw error;
+          savedRecord = data;
+        }
+        await fetchMembersFromSupabase();
+        showToast("Member synced live to Supabase Cloud!", "success");
+      } else {
+        // Offline Local Demo Fallback
+        const localId = editingRecordId || crypto.randomUUID();
+        savedRecord = {
+          id: localId,
+          ...payload,
+          created_at: existing?.created_at || new Date().toISOString()
+        };
+        const idx = membersList.findIndex((m) => m.id === localId);
+        if (idx >= 0) membersList[idx] = savedRecord;
+        else membersList.unshift(savedRecord);
+
+        localStorage.setItem(STORAGE_KEYS.MEMBERS, JSON.stringify(membersList));
+        updateMemberCount();
+        renderDirectory();
+        showToast("Member saved locally (Connect Supabase for live multi-device sync).", "info");
+      }
+
+      editingRecordId = null;
+      populateA4Document(savedRecord);
+      switchTab("preview");
+    } catch (err) {
+      console.error("Save error:", err);
+      showToast(`Error saving record: ${err.message || "Check connection"}`, "error");
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = origHTML;
+    }
+  }
+
+  // =========================================================================
+  // 8. DIRECTORY RENDERING WITH CALLABLE TEL: BUTTONS & ADMIN CONTROLS
+  // =========================================================================
+  function sanitizeTelHref(phoneStr) {
+    if (!phoneStr) return "";
+    return phoneStr.replace(/[^+\d]/g, "");
+  }
+
+  function renderDirectory() {
+    const query = (document.getElementById("search-members").value || "").toLowerCase();
+    const statusFilter = document.getElementById("filter-status").value;
+
+    const filtered = membersList.filter((m) => {
+      const matchesQuery =
+        (m.full_name || "").toLowerCase().includes(query) ||
+        (m.member_no || "").toLowerCase().includes(query) ||
+        (m.phone || "").toLowerCase().includes(query) ||
+        (m.residence || "").toLowerCase().includes(query);
+      const matchesStatus = statusFilter === "ALL" || (m.approval_status || "Pending") === statusFilter;
+      return matchesQuery && matchesStatus;
+    });
+
+    const grid = document.getElementById("directory-grid");
+    if (filtered.length === 0) {
+      grid.innerHTML = `
+        <div class="col-span-full text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+          <p class="text-slate-600 font-semibold">No matching member records found.</p>
+          <p class="text-xs text-slate-400 mt-1">Register a new member or adjust your search filter.</p>
+        </div>
+      `;
+      return;
+    }
+
+    grid.innerHTML = filtered
+      .map((m) => {
+        const cleanPhone = sanitizeTelHref(m.phone);
+        const cleanNokPhone = sanitizeTelHref(m.emergency_phone);
+        const isApproved = m.approval_status === "Approved";
+
+        return `
+          <div class="border border-slate-200 rounded-xl p-4 bg-white hover:shadow-md transition flex flex-col justify-between gap-3">
+            <div>
+              <div class="flex items-start gap-3">
+                <div class="w-16 h-20 rounded-lg border-2 border-[#0B2545] bg-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                  ${m.passport_photo ? `<img src="${m.passport_photo}" class="w-full h-full object-cover" />` : `<span class="text-[10px] text-slate-400 text-center px-1">No Photo</span>`}
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-100 text-[#9A6F08]">${m.member_no}</span>
+                    ${isApproved
+                      ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">Approved &amp; Verified</span>`
+                      : `<span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">Pending</span>`
+                    }
+                  </div>
+                  <h3 class="font-bold text-[#0B2545] truncate mt-1 text-sm">${m.full_name}</h3>
+                  <p class="text-xs text-slate-600">${m.gender || ""} • ${m.occupation || "Member"}</p>
+                  <p class="text-[11px] text-slate-400 truncate">${m.residence || ""}</p>
+                </div>
+              </div>
+
+              <!-- Clickable tel: Call Links -->
+              <div class="mt-3 pt-2.5 border-t border-slate-100 space-y-1.5 text-xs">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-slate-500">Member:</span>
+                  ${cleanPhone
+                    ? `<a href="tel:${cleanPhone}" class="inline-flex items-center gap-1 font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-md transition">
+                        <span>📞 Call Member</span>
+                        <span class="text-[11px] font-mono">(${m.phone})</span>
+                      </a>`
+                    : `<span class="text-slate-400">N/A</span>`
+                  }
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-slate-500">Next of Kin:</span>
+                  ${cleanNokPhone
+                    ? `<a href="tel:${cleanNokPhone}" class="inline-flex items-center gap-1 font-semibold text-[#0B2545] hover:underline bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-md transition">
+                        <span>📞 Call Next of Kin</span>
+                      </a>`
+                    : `<span class="text-slate-400">N/A</span>`
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Card Action Buttons -->
+            <div class="flex items-center gap-2 pt-2.5 border-t border-slate-200">
+              <button onclick="viewMemberA4('${m.id}')" class="flex-1 px-3 py-2 bg-[#0B2545] hover:bg-[#081b33] text-white text-xs font-bold rounded-lg transition">
+                View / Download A4 PDF
+              </button>
+              ${isAdmin ? `
+                <button onclick="editMember('${m.id}')" class="px-3 py-2 bg-amber-100 hover:bg-amber-200 text-[#0B2545] text-xs font-bold rounded-lg transition" title="Edit & Sign Off">
+                  Edit / Sign
+                </button>
+                <button onclick="promptDeleteMember('${m.id}')" class="px-2.5 py-2 bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-bold rounded-lg transition" title="Delete Member">
+                  Del
+                </button>
+              ` : `
+                <button onclick="toggleAdminAuth()" class="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-500 text-xs font-semibold rounded-lg transition" title="Admin Password Required to Edit">
+                  🔒 Edit
+                </button>
+              `}
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  // =========================================================================
+  // 9. ADMIN EDIT, QUICK APPROVE & DELETE HANDLERS
+  // =========================================================================
+  function editMember(id) {
+    if (!isAdmin) {
+      toggleAdminAuth();
+      return;
+    }
+    const m = membersList.find((item) => item.id === id);
+    if (!m) return;
+
+    editingRecordId = m.id;
+    document.getElementById("form-heading").textContent = `Admin Edit & Sign-Off: ${m.full_name}`;
+    document.getElementById("editing-badge").classList.remove("hidden");
+
+    document.getElementById("field-memberNo").value = m.member_no || "";
+    document.getElementById("field-regDate").value = m.registration_date || getTodayISO();
+    document.getElementById("field-gender").value = m.gender || "Female";
+    document.getElementById("field-fullName").value = m.full_name || "";
+    document.getElementById("field-dob").value = m.date_of_birth || "";
+    document.getElementById("field-nationalId").value = m.national_id || "";
+    document.getElementById("field-marital").value = m.marital_status || "Single";
+    document.getElementById("field-occupation").value = m.occupation || "";
+    document.getElementById("field-phone").value = m.phone || "";
+    document.getElementById("field-email").value = m.email || "";
+    document.getElementById("field-residence").value = m.residence || "";
+    document.getElementById("field-emergencyName").value = m.emergency_name || "";
+    document.getElementById("field-emergencyRel").value = m.emergency_relationship || "";
+    document.getElementById("field-emergencyPhone").value = m.emergency_phone || "";
+    document.getElementById("field-oath").checked = true;
+
+    // Populate Admin Signatories Panel
+    document.getElementById("field-approvalStatus").value = m.approval_status || "Pending";
+    document.getElementById("sig-chair-name").value = m.chairperson_name || "";
+    document.getElementById("sig-chair-sign").value = m.chairperson_sign || "";
+    document.getElementById("sig-chair-date").value = m.chairperson_date || "";
+
+    document.getElementById("sig-sec-name").value = m.secretary_name || "";
+    document.getElementById("sig-sec-sign").value = m.secretary_sign || "";
+    document.getElementById("sig-sec-date").value = m.secretary_date || "";
+
+    document.getElementById("sig-treas-name").value = m.treasurer_name || "";
+    document.getElementById("sig-treas-sign").value = m.treasurer_sign || "";
+    document.getElementById("sig-treas-date").value = m.treasurer_date || "";
+
+    document.getElementById("sig-welfare-name").value = m.welfare_name || "";
+    document.getElementById("sig-welfare-sign").value = m.welfare_sign || "";
+    document.getElementById("sig-welfare-date").value = m.welfare_date || "";
+
+    currentPhotoDataUrl = m.passport_photo || "";
+    const preview = document.getElementById("photo-preview");
+    if (currentPhotoDataUrl) {
+      preview.src = currentPhotoDataUrl;
+      preview.classList.remove("hidden");
+      document.getElementById("photo-placeholder").classList.add("hidden");
+    } else {
+      preview.classList.add("hidden");
+      document.getElementById("photo-placeholder").classList.remove("hidden");
+    }
+    switchTab("register");
+  }
+
+  function editCurrentPreviewAsAdmin() {
+    if (!isAdmin) {
+      toggleAdminAuth();
+      return;
+    }
+    if (currentPreviewMember && currentPreviewMember.id) {
+      editMember(currentPreviewMember.id);
+    }
+  }
+
+  async function quickApproveAndSignCurrentMember() {
+    if (!isAdmin || !currentPreviewMember || !currentPreviewMember.id) return;
+    if (
+      !leadershipDefaults.chairperson_name &&
+      !leadershipDefaults.secretary_name &&
+      !leadershipDefaults.treasurer_name &&
+      !leadershipDefaults.welfare_name
+    ) {
+      openLeadershipDefaultsModal();
+      showToast("Please save your Default Executive Names first.", "info");
+      return;
+    }
+
+    const today = getTodayISO();
+    const updates = {
+      approval_status: "Approved",
+      chairperson_name: leadershipDefaults.chairperson_name || "",
+      chairperson_sign: leadershipDefaults.chairperson_name || "",
+      chairperson_date: leadershipDefaults.chairperson_name ? today : "",
+      secretary_name: leadershipDefaults.secretary_name || "",
+      secretary_sign: leadershipDefaults.secretary_name || "",
+      secretary_date: leadershipDefaults.secretary_name ? today : "",
+      treasurer_name: leadershipDefaults.treasurer_name || "",
+      treasurer_sign: leadershipDefaults.treasurer_name || "",
+      treasurer_date: leadershipDefaults.treasurer_name ? today : "",
+      welfare_name: leadershipDefaults.welfare_name || "",
+      welfare_sign: leadershipDefaults.welfare_name || "",
+      welfare_date: leadershipDefaults.welfare_name ? today : ""
+    };
+
+    const updatedMember = { ...currentPreviewMember, ...updates };
+    const idx = membersList.findIndex((m) => m.id === updatedMember.id);
+    if (idx >= 0) membersList[idx] = updatedMember;
+    localStorage.setItem(STORAGE_KEYS.MEMBERS, JSON.stringify(membersList));
+
+    if (isSupabaseLive && sb) {
+      try {
+        const { error: rpcErr } = await sb.rpc("admin_update_member", {
+          p_password: ADMIN_PASSWORD,
+          p_id: updatedMember.id,
+          p_updates: updates
+        });
+        if (rpcErr) {
+          await sb.from("members").update(updates).eq("id", updatedMember.id);
+        }
+        await fetchMembersFromSupabase();
+      } catch (err) {
+        console.error("Quick approve sync error:", err);
+      }
+    }
+
+    populateA4Document(updatedMember);
+    renderDirectory();
+    showToast("Member approved & executive signatories stamped onto A4 PDF!", "success");
+  }
+
+  function promptDeleteMember(id) {
+    if (!isAdmin) {
+      toggleAdminAuth();
+      return;
+    }
+    const m = membersList.find((item) => item.id === id);
+    if (!m) return;
+    pendingDeleteId = id;
+    document.getElementById("delete-target-name").textContent = `${m.full_name} (${m.member_no})`;
+    document.getElementById("modal-delete-confirm").classList.remove("hidden");
+  }
+
+  function closeDeleteModal() {
+    pendingDeleteId = null;
+    document.getElementById("modal-delete-confirm").classList.add("hidden");
+  }
+
+  async function confirmDeleteMember() {
+    if (!pendingDeleteId || !isAdmin) return;
+    const idToDelete = pendingDeleteId;
+    closeDeleteModal();
+
+    membersList = membersList.filter((m) => m.id !== idToDelete);
+    localStorage.setItem(STORAGE_KEYS.MEMBERS, JSON.stringify(membersList));
+    updateMemberCount();
+    renderDirectory();
+
+    if (isSupabaseLive && sb) {
+      try {
+        const { error: rpcErr } = await sb.rpc("admin_delete_member", {
+          p_password: ADMIN_PASSWORD,
+          p_id: idToDelete
+        });
+        if (rpcErr) {
+          await sb.from("members").delete().eq("id", idToDelete);
+        }
+      } catch (err) {
+        console.error("Supabase delete error:", err);
+      }
+    }
+    showToast("Member record deleted from synced registry.", "info");
+  }
+
+  // =========================================================================
+  // 10. A4 PDF DOSSIER POPULATOR & CLIENT-SIDE DOWNLOAD ENGINE
+  // =========================================================================
+  function viewMemberA4(id) {
+    const m = membersList.find((item) => item.id === id);
+    if (!m) return;
+    populateA4Document(m);
+    switchTab("preview");
+  }
+
+  function populateA4Document(m) {
+    currentPreviewMember = m;
+    document.getElementById("preview-banner-title").textContent = `A4 Dossier: ${m.full_name || "Blank Form"} (${m.member_no})`;
+
+    const quickBar = document.getElementById("preview-quick-sign-bar");
+    if (isAdmin && m.id) {
+      quickBar.classList.remove("hidden");
+    } else {
+      quickBar.classList.add("hidden");
+    }
+
+    document.getElementById("a4-memberNo").textContent = m.member_no || "—";
+    document.getElementById("a4-regDate").textContent = m.registration_date || "—";
+
+    const statusBadge = document.getElementById("a4-status-badge");
+    const sealBox = document.getElementById("a4-approved-seal-box");
+    if (m.approval_status === "Approved") {
+      statusBadge.textContent = "APPROVED & VERIFIED";
+      statusBadge.className = "px-2 py-0.5 rounded font-bold bg-emerald-100 text-emerald-800 border border-emerald-300";
+      sealBox.classList.remove("hidden");
+    } else {
+      statusBadge.textContent = "PENDING APPROVAL";
+      statusBadge.className = "px-2 py-0.5 rounded font-bold bg-amber-100 text-amber-800";
+      sealBox.classList.add("hidden");
+    }
+
+    document.getElementById("a4-fullName").textContent = m.full_name || " ";
+    document.getElementById("a4-gender").textContent = m.gender || " ";
+    document.getElementById("a4-dob").textContent = m.date_of_birth || " ";
+    document.getElementById("a4-nationalId").textContent = m.national_id || " ";
+    document.getElementById("a4-marital").textContent = m.marital_status || " ";
+    document.getElementById("a4-phone").textContent = m.phone || " ";
+    document.getElementById("a4-email").textContent = m.email || "N/A";
+    document.getElementById("a4-residence").textContent = m.residence || " ";
+    document.getElementById("a4-occupation").textContent = m.occupation || "N/A";
+
+    document.getElementById("a4-emergencyName").textContent = m.emergency_name || " ";
+    document.getElementById("a4-emergencyRel").textContent = m.emergency_relationship || " ";
+    document.getElementById("a4-emergencyPhone").textContent = m.emergency_phone || " ";
+
+    document.getElementById("a4-oath-name").textContent = m.full_name || "the undersigned applicant";
+    document.getElementById("a4-sig-name").textContent = m.full_name || " ";
+    document.getElementById("a4-member-script-sig").textContent = m.full_name || "";
+    document.getElementById("a4-sig-date").textContent = m.registration_date || " ";
+
+    // Populate Section D Signatories (Article 6)
+    document.getElementById("a4-chair-name").textContent = m.chairperson_name || "";
+    document.getElementById("a4-chair-sign").textContent = m.chairperson_sign || "";
+    document.getElementById("a4-chair-date").textContent = m.chairperson_date || "";
+
+    document.getElementById("a4-sec-name").textContent = m.secretary_name || "";
+    document.getElementById("a4-sec-sign").textContent = m.secretary_sign || "";
+    document.getElementById("a4-sec-date").textContent = m.secretary_date || "";
+
+    document.getElementById("a4-treas-name").textContent = m.treasurer_name || "";
+    document.getElementById("a4-treas-sign").textContent = m.treasurer_sign || "";
+    document.getElementById("a4-treas-date").textContent = m.treasurer_date || "";
+
+    document.getElementById("a4-welfare-name").textContent = m.welfare_name || "";
+    document.getElementById("a4-welfare-sign").textContent = m.welfare_sign || "";
+    document.getElementById("a4-welfare-date").textContent = m.welfare_date || "";
+
+    // Passport Photo
+    const photoImg = document.getElementById("a4-photo");
+    const photoEmpty = document.getElementById("a4-photo-empty");
+    if (m.passport_photo) {
+      photoImg.src = m.passport_photo;
+      photoImg.classList.remove("hidden");
+      photoEmpty.classList.add("hidden");
+    } else {
+      photoImg.classList.add("hidden");
+      photoEmpty.classList.remove("hidden");
+    }
+  }
+
+  function loadBlankA4Form() {
+    populateA4Document({
+      id: null,
+      member_no: "BS-2026-____",
+      registration_date: "____ / ____ / 2026",
+      full_name: "",
+      gender: "Male / Female",
+      date_of_birth: "____ / ____ / ________",
+      national_id: "",
+      marital_status: "",
+      phone: "",
+      email: "",
+      residence: "",
+      occupation: "",
+      emergency_name: "",
+      emergency_relationship: "",
+      emergency_phone: "",
+      passport_photo: "",
+      approval_status: "Pending",
+      chairperson_name: "",
+      chairperson_sign: "",
+      chairperson_date: "",
+      secretary_name: "",
+      secretary_sign: "",
+      secretary_date: "",
+      treasurer_name: "",
+      treasurer_sign: "",
+      treasurer_date: "",
+      welfare_name: "",
+      welfare_sign: "",
+      welfare_date: ""
+    });
+    document.getElementById("preview-banner-title").textContent = "Blank Printable A4 Registration Form";
+    switchTab("preview");
+  }
+
+  async function downloadDirectA4PDF() {
+    const element = document.getElementById("a4-document");
+    const btn = document.getElementById("btn-download-pdf");
+    const originalHTML = btn.innerHTML;
+
+    btn.disabled = true;
+    btn.innerHTML = `<span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span> <span>Generating A4 PDF...</span>`;
+
+    const safeName = (currentPreviewMember?.full_name || "Blank_Form")
+      .replace(/[^a-zA-Z0-9_-]/g, "_")
+      .replace(/_+/g, "_");
+    const safeId = (currentPreviewMember?.member_no || "BS_2026").replace(/[^a-zA-Z0-9_-]/g, "_");
+    const filename = `${safeId}_${safeName}_A4_Dossier.pdf`;
+
+    try {
+      if (typeof html2pdf === "undefined") {
+        throw new Error("html2pdf library unavailable");
+      }
+
+      const prevShadow = element.style.boxShadow;
+      const prevBorder = element.style.border;
+      element.style.boxShadow = "none";
+      element.style.border = "none";
+
+      const opt = {
+        margin: 0,
+        filename: filename,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          letterRendering: true,
+          scrollY: 0
+        },
+        jsPDF: {
+          unit: "mm",
+          format: "a4",
+          orientation: "portrait"
+        }
+      };
+
+      await html2pdf().set(opt).from(element).save();
+
+      element.style.boxShadow = prevShadow;
+      element.style.border = prevBorder;
+      showToast(`Downloaded ${filename}`, "success");
+    } catch (err) {
+      console.error("PDF export fallback to print:", err);
+      showToast("Opening browser A4 PDF Print dialog...", "info");
+      window.print();
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = originalHTML;
+    }
+  }
+
+  async function downloadConstitutionA4PDF() {
+    const element = document.getElementById("constitution-a4-sheet");
+    const btn = document.getElementById("btn-download-constitution-pdf");
+    const originalHTML = btn.innerHTML;
+
+    btn.disabled = true;
+    btn.innerHTML = `<span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span> <span>Generating PDF...</span>`;
+
+    try {
+      if (typeof html2pdf === "undefined") {
+        throw new Error("html2pdf library unavailable");
+      }
+
+      const opt = {
+        margin: [8, 8, 8, 8],
+        filename: "Constitution_of_Brotherhood_and_Sisterhood_A4.pdf",
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          letterRendering: true,
+          scrollY: 0
+        },
+        jsPDF: {
+          unit: "mm",
+          format: "a4",
+          orientation: "portrait"
+        }
+      };
+
+      await html2pdf().set(opt).from(element).save();
+      showToast("Downloaded Constitution_of_Brotherhood_and_Sisterhood_A4.pdf", "success");
+    } catch (err) {
+      console.error("Constitution PDF export fallback to print:", err);
+      showToast("Opening browser A4 PDF Print dialog...", "info");
+      window.print();
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = originalHTML;
+    }
+  }
+</script>
+</body>
+</html>
